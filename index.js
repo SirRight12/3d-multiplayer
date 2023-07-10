@@ -16,6 +16,7 @@ class Player {
         this.transform = {}
         this.transform.position = position
         this.transform.geometry = geometry
+        this.transform.dir = "forward"
     }
 }
 const players = {
@@ -39,18 +40,22 @@ io.on("connection", (socket) => {
         switch(key) {
             case "S": {
                 players[socket.id].transform.position.z += 1 
+                players[socket.id].transform.dir = "backward"
                 break;
             }
             case "W": {
                 players[socket.id].transform.position.z -= 1
+                players[socket.id].transform.dir = "forward"
                 break;
             }
             case "A": {
                 players[socket.id].transform.position.x -= 1
+                players[socket.id].transform.dir = "left"
                 break;
             }
             case "D": {
                 players[socket.id].transform.position.x += 1
+                players[socket.id].transform.dir = "right"
                 break;
             }
         }
