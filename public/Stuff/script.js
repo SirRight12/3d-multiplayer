@@ -20,12 +20,13 @@ function init() {
     
     console.log(duckObj)
   })
+  function makeSword() {
   let sword = loader.load("static/threejs/media/Assets/Other_Yoinks/sword_teamRed.glb", (gltf) => {
     sword = gltf.scene
     scene.add(sword)
-    sword.position.y = 1
-    sword.position.x = 1
   })
+  return sword
+}
   const duckLight = new THREE.PointLight(0xfffffff);
     scene.add(duckLight);
 
@@ -56,6 +57,9 @@ function init() {
     cube.position.y = player.transform.position.y
     cube.position.z = player.transform.position.z
     objs[Name] = cube
+    let sword = makeSword()
+    setPosTo3 (sword, cube)
+    console.log(sword)
     scene.add( cube );
   }
   const floorGeometry = new THREE.BoxGeometry(10,1,10)
