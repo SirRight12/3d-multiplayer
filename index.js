@@ -42,20 +42,24 @@ io.on("connection", (socket) => {
             case "S": {
                 players[socket.id].transform.position.z += 1 
                 players[socket.id].transform.dir = "backward"
+                players[socket.id].transform.dir = "backward"
                 break;
             }
             case "W": {
                 players[socket.id].transform.position.z -= 1
+                players[socket.id].transform.dir = "forward"
                 players[socket.id].transform.dir = "forward"
                 break;
             }
             case "A": {
                 players[socket.id].transform.position.x -= 1
                 players[socket.id].transform.dir = "left"
+                players[socket.id].transform.dir = "left"
                 break;
             }
             case "D": {
                 players[socket.id].transform.position.x += 1
+                players[socket.id].transform.dir = "right"
                 players[socket.id].transform.dir = "right"
                 break;
             }
