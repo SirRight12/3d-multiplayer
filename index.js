@@ -15,7 +15,9 @@ class Player {
     constructor ({position={x:0,y:0,z:0},geometry={x:1,y:1,z:1}}) {
         this.transform = {}
         this.transform.position = position
+        this.transform.dir = "forward"
         this.transform.geometry = geometry
+        this.hasSword = false
     }
 }
 const players = {
@@ -39,24 +41,31 @@ io.on("connection", (socket) => {
         switch(key) {
             case "S": {
                 players[socket.id].transform.position.z += 1 
+                players[socket.id].transform.dir = "backward"
                 break;
             }
             case "W": {
                 players[socket.id].transform.position.z -= 1
+                players[socket.id].transform.dir = "forward"
                 break;
             }
             case "A": {
                 players[socket.id].transform.position.x -= 1
+                players[socket.id].transform.dir = "left"
                 break;
             }
             case "D": {
                 players[socket.id].transform.position.x += 1
+                players[socket.id].transform.dir = "right"
                 break;
             }
         }
         if (players[socket.id] != player)  {
             io.emit("playerUpdate",players)
         }
+    })
+    socket.on("hasSword", () => {
+        players[socket.id].hasSword = true
     })
     console.log(players)
     io.emit("playerUpdate",players)

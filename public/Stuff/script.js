@@ -18,14 +18,30 @@ function init() {
     scene.add(duckObj)
     duckObj.position.y = 1
     
-    console.log(duckObj)
   })
-  let sword = loader.load("static/threejs/media/Assets/Other_Yoinks/sword_teamRed.glb", (gltf) => {
-    sword = gltf.scene
-    scene.add(sword)
-    sword.position.y = 1
-    sword.position.x = 1
-  })
+  /* let sword;
+  async function makeSword() {
+    let loaded = false
+      sword = await loader.load("static/threejs/media/Assets/Other_Yoinks/sword_teamRed.glb", (gltf) => {
+            loaded = true
+            console.log("done")
+            sword = gltf.scene
+            return gltf.scene
+        })
+        console.log(await sword)
+        return await sword
+    } */
+    async function makeSword() {
+        return new Promise((resolve, reject) => {
+          loader.load("static/threejs/media/Assets/Other_Yoinks/sword_teamRed.glb", (gltf) => {
+            const sword = gltf.scene;
+            resolve(sword);
+          }, undefined, (error) => {
+            reject(error);
+          });
+        });
+      }
+      
   const duckLight = new THREE.PointLight(0xfffffff);
     scene.add(duckLight);
 
@@ -56,7 +72,63 @@ function init() {
     cube.position.y = player.transform.position.y
     cube.position.z = player.transform.position.z
     objs[Name] = cube
-    scene.add( cube );
+        if (!objs[Name + "_sword"]) {
+            makeSword().then((sword) => {
+                scene.add(sword)
+                objs[Name + "_sword"] = sword
+                setPosTo3(sword,cube,determineSwordOffset(player.transform.dir))
+                changeSwordDir(sword,player.transform.dir)
+            }).catch((error) => {
+                console.error(error);
+            });
+        } else {
+            setPosTo3(objs[Name + "_sword"],cube,determineSwordOffset(player.transform.dir))
+            changeSwordDir(objs[Name + "_sword"],player.transform.dir)
+        }
+        scene.add( cube );
+  }
+  function determineSwordOffset(dir) {
+    let offset;
+    switch (dir) {
+        case "forward": 
+            offset = {
+                x: -.25,
+                y: 0,
+                z: -.75,
+            }
+            break;
+        case "backward": 
+            offset = {
+                x: .25,
+                y: 0,
+                z: .75,
+            }
+            break;
+        case "left": 
+            offset = {
+                x: -.75,
+                y: 0,
+                z: -.25,
+            }
+            break;
+        case "right": 
+            offset = {
+                x: .75,
+                y: 0,
+                z: .25,
+            }
+            break;
+    }
+    return offset;
+  }
+  function changeSwordDir(sword,dir) {
+    
+    if (dir == "left" || dir == "right") 
+    {
+        sword.rotation.y = 0
+        return
+    }
+    sword.rotation.y = 1.5
   }
   const floorGeometry = new THREE.BoxGeometry(10,1,10)
   const floorMaterial = new THREE.MeshBasicMaterial( { color: 0xffffff} )
@@ -94,6 +166,7 @@ function init() {
   })
   socket.on("playerDisconnect", (plrName) => {
     removePlayer(plrName)
+    removePlayer(plrName + "_sword")
     delete players[plrName]
   })
   function removePlayer(name) {
@@ -123,8 +196,6 @@ function checkIfLoad() {
         }
         if (duckLight.position.y - lightOffset.y == duckObj.position.y) return
         setPosTo3(duckLight,duckObj,lightOffset)
-        console.log(duckLight.position)
-        console.log(duckLight.position)
 }
 }
 init();
