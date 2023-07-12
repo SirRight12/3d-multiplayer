@@ -92,14 +92,14 @@ function init() {
     switch (dir) {
         case "forward": 
             offset = {
-                x: -.25,
+                x: .25,
                 y: 0,
                 z: -.75,
             }
             break;
         case "backward": 
             offset = {
-                x: .25,
+                x: -.25,
                 y: 0,
                 z: .75,
             }
@@ -141,6 +141,7 @@ function init() {
     for (let i in backendPlayers) {
         const player = backendPlayers[i] 
         makePlayer(player,i)
+        player.openInventory = openInventory
         players[i] = player
     } 
     const camOffset = {
@@ -196,6 +197,118 @@ function checkIfLoad() {
         }
         if (duckLight.position.y - lightOffset.y == duckObj.position.y) return
         setPosTo3(duckLight,duckObj,lightOffset)
+    }
+    
+    
+    
 }
+socket.on("updateInv", () => {
+    openInventory()
+})
+let inv;
+function replaceAll(thing) {
+    let returnval = thing.replace("short"," Short")
+    returnval = returnval.replace("great"," Great")
+    returnval = returnval.replace("sword"," Sword")
+    returnval = returnval.replace("copper","Copper")
+    returnval = returnval.replace("stick","Stick")
+    returnval = returnval.replace("legs"," Leggings")
+    returnval = returnval.replace("chest"," Chestplate")
+    returnval = returnval.replace("helmet"," Helmet")
+    returnval = returnval.replace("ancient","Ancient")
+    returnval = returnval.replace("wood", "Wooden")
+    returnval = returnval.replace("grand", "Grand")
+    returnval = returnval.replace("father", " Father")
+    return returnval
+}
+function openInventory() {
+    if (inv) inv.remove() 
+    const player = players[socket.id]
+    inv = document.createElement("div")
+    inv.id = "inv"
+    inv.style.width = "70%"
+    inv.style.height =  "85%"
+    inv.innerHTML = "<strong> Inventory: </strong> <br>"
+    let i = 0
+    let list = {}
+    document.body.appendChild(inv)
+    for (let item in player.inventory.holding) {
+        let itemthing = player.inventory.holding[item]
+    let truename = replaceAll(itemthing.name)
+    let fullName;
+    if (itemthing.type == "weapon") {
+        fullName = truename + ": " + itemthing.damage + " damage " + '"' + itemthing.tooltip + '"' + " <br>"
+    } else if (itemthing.type == "armor") {
+        fullName = truename + ": " + itemthing.defense + " defense " + '"' + itemthing.tooltip + '"' + " <br>"
+    }
+    list[i] = {}
+    list[i].name = fullName
+    list[i].item = itemthing
+    i ++
+    }
+    if (i <= 0) {
+        list[i] = {}
+        list[i].name = "Nothing"
+        list[i].item = "non-existant"
+    }
+for (let x in list) {
+    let name = list[x].name
+    let thing = document.createElement("p")
+    thing.id = list[x].item.name
+    thing.className = "delete"
+    thing.innerHTML = name
+    inv.appendChild(thing)
+    delete list[x]
+}
+list = {}
+i = 0
+inv.innerHTML += "<br> <strong> Equipped: </strong> <br>"
+let itemsadded = 0
+    for (let item in player.inventory.equipped) {
+        let itemthing = player.inventory.equipped[item]
+        if (itemthing) {
+            itemsadded ++
+            let fullName
+            let truename = replaceAll(itemthing.name)
+            if (itemthing.type == "weapon") {
+                fullName = truename + ": " + itemthing.damage + " damage " + '"' + itemthing.tooltip + '"' + " <br>"
+            } else if (itemthing.type == "armor") {
+                fullName = truename + ": " + itemthing.defense + " defense " + '"' + itemthing.tooltip + '"' + " <br>"
+            }
+            list[i] = {}
+            list[i].name = fullName
+            list[i].item = itemthing
+            i ++
+        }
+    }
+    if (itemsadded < 1) {
+        inv.innerHTML += "Nothing"
+    } else {
+        for (let x in list) {
+            let name = list[x].name
+            let thing = document.createElement("p")
+            thing.id = list[x].item.name
+            thing.className = "delete2"
+            thing.innerHTML = name
+            inv.appendChild(thing)
+            delete list[x]
+        }
+    }
+    let allp = document.getElementsByClassName("delete")
+    for (let i = 0; i < allp.length; i++) {
+        let thing = allp[i]
+        thing.addEventListener("click",test)
+    }
+    let all = document.getElementsByClassName("delete2")
+    for (let i = 0; i < all.length; i++) {
+        let thing = all[i]
+        thing.addEventListener("click",test2)
+    }
+    function test() {
+        socket.emit("equipItem", (this.id))
+    }
+    function test2() {
+        socket.emit("unequipItem", (this.id))
+    }
 }
 init();

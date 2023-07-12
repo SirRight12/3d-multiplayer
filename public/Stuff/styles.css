@@ -7,45 +7,32 @@ html,body {
     width: 100%;
     height: 100%;
 }
-p {
+#inv {
+    background-color: rgb(39, 39, 39);
+    border: 5px inset #ccc;
+    padding: 10px;
     color: white;
+    font-family: 'Press Start 2P', cursive;
+    user-select: none;
     position: absolute;
-}
-#board {
-    width: 70%;
-    height: 100%;
-    position: absolute;
-    background-color: #1e2b32;
-    /*#2f424e*/
-}
-#container {
-    background-color: #1e2b32;
-    width: 100%;
-    height: 10%; 
-    position: absolute;
-    display: flex;
-    bottom: 0%;
-}
-#message {
-    right: 2.5%;
-    width: 80%;
-    height: 100%;
-    background-color: #2f424e;
-    color: white;
-    font-size: 20px;
-    overflow-y: scroll;
-}
-#user {
-    background-color: #2f424e;
-    width: 10%;
-    bottom: 0%;
-    left: 2.5%;
-    height: 100%;  
-    color: white;
-    overflow-y: scroll;
-    font-size: 20px;
-}
-#space {
-   width: 10%;
-   height: 100% 
-}
+  }
+  
+  #inv strong {
+    font-size: 18px;
+  }
+  
+  #inv p {
+    margin: 0;
+    padding: 5px 0;
+  }
+  
+  .delete:hover {
+    background-color: rgb(213, 235, 17);
+    cursor: pointer;
+  }
+  
+  .delete2:hover {
+    background-color: rgb(213, 235, 17);
+    cursor: pointer;
+  }
+  

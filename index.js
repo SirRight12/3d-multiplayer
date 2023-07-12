@@ -42,10 +42,11 @@ const armors = {
 }
 class Player {
     constructor ({position={x:0,y:0,z:0},geometry={x:1,y:1,z:1}}) {
-        this.transform = {}
-        this.transform.position = position
-        this.transform.dir = "forward"
-        this.transform.geometry = geometry
+        this.transform = {
+            position: position,
+            dir: "forward",
+            geometry: geometry,
+        }
         this.hasSword = false
         this.inventory = {
             equipped: {
@@ -58,9 +59,30 @@ class Player {
                 "woodhelmet": armors.woodhelmet,
             },
         },
+        this.unequip = function (item) {
+            if (item.type == "armor") {
+                switch (item.slot) {
+                    case "armor-head": 
+                        this.inventory.holding[this.inventory.equipped.head.name] = item
+                        delete this.inventory.equipped.head 
+                        break;
+                    case "armor-chest":
+                        this.inventory.holding[this.inventory.equipped.chest.name] = item
+                        delete this.inventory.equipped.chest
+                        break;
+                    case "armor-legs": 
+                        this.inventory.holding[this.inventory.equipped.legs.name] = item
+                        delete this.inventory.equipped.legs
+                        break;
+                }
+            } else {
+                this.inventory.holding[this.inventory.equipped.rightWeapon.name] = item
+                delete this.inventory.equipped.rightWeapon
+            }
+        }
         this.equip = function (item) {
+         
             let foundmatch = false
-            console.log(this)
             for (let x in this.inventory.holding) {
                 if (this.inventory.holding[x].name.toUpperCase() == item.name.toUpperCase()) {
                     foundmatch = true
@@ -69,7 +91,8 @@ class Player {
             }
             if (!foundmatch) {
                 return
-            }
+            } 
+            //if (!this.inventory.holding.hasOwnProperty(item.name)) return
             console.log("item found!")
             let equip = item.name
             switch(item.slot) {
@@ -138,8 +161,6 @@ io.on("connection", (socket) => {
             z: 0,
         }
     })
-    players[socket.id].equip(armors["woodhelmet"])
-    console.log(players[socket.id].inventory)
     socket.on("keydown",(key) => {
         const player = players[socket.id].transform
         switch(key) {
@@ -167,21 +188,61 @@ io.on("connection", (socket) => {
                 players[socket.id].transform.dir = "right"
                 break;
             }
+            case "I": {
+                socket.emit("updateInv")
+                break;
+            }
         }
         if (players[socket.id] != player)  {
             io.emit("playerUpdate",players)
         }
     })
-    socket.on("hasSword", () => {
-        players[socket.id].hasSword = true
+    socket.on("equipItem", (itemName) => {
+        let item;
+        let iswep = isWeapon(weapons[itemName])
+        if (iswep){
+            item = weapons[itemName]
+        } else if (iswep == false) {
+            item = armors[itemName]
+        }
+        if (!item) {
+            console.log("item does not exist?")
+            return
+        }
+        players[socket.id].equip(item)
+        io.emit("playerUpdate",players)
+        socket.emit("updateInv")
     })
-    console.log(players)
     io.emit("playerUpdate",players)
-    socket.on("disconnect",() => {
+    socket.on("disconnect", () => {
+        console.log("player leave :'(")
         io.emit("playerDisconnect",(socket.id))
         delete players[socket.id]
+    })
+    socket.on("unequipItem", (itemName) => {
+        let item;
+        let iswep = isWeapon(weapons[itemName])
+        if (iswep){
+            item = weapons[itemName]
+        } else if (iswep == false) {
+            item = armors[itemName]
+        }
+        if (!item) {
+            console.log("item does not exist?")
+            return
+        }
+        players[socket.id].unequip(item)
+        io.emit("playerUpdate",players)
+        socket.emit("updateInv")
     })
 })
 server.listen(port, () => {
     console.log(`Example app listening on port http://localhost:${port}`)
 })
+function isWeapon(item) {
+    if (!item) return false
+    switch(item.type) {
+        case "weapon":
+            return true
+    }
+}
