@@ -165,6 +165,10 @@ function init() {
     let keyism = event.key.toUpperCase()
     socket.emit("keydown",(keyism))
   })
+  document.addEventListener("keyup", (event) => {
+    let keyism = event.key.toUpperCase()
+    socket.emit("keyup",(keyism))
+  })
   socket.on("playerDisconnect", (plrName) => {
     removePlayer(plrName)
     removePlayer(plrName + "_sword")

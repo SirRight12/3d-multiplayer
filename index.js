@@ -59,6 +59,11 @@ class Player {
                 "woodhelmet": armors.woodhelmet,
             },
         },
+        this.velocity = {
+            x: 0,
+            y: 0,
+            z: 0,
+        }
         this.unequip = function (item) {
             if (item.type == "armor") {
                 switch (item.slot) {
@@ -145,6 +150,18 @@ class Player {
         }
     }
 }
+function animLoop() {
+    for (let x in players) {
+        move(players[x])
+    }
+    io.emit("playerUpdate",players)
+}
+function move(player) {
+    if (!player.velocity.x && !player.velocity.z && !player.velocity.y) return
+        player.transform.position.x += player.velocity.x
+        player.transform.position.y += player.velocity.y
+        player.transform.position.z += player.velocity.z
+}
 const players = {
 
 }
@@ -152,6 +169,7 @@ app.get('/game', (request, result) => {
     result.sendFile( __dirname + '/index.html')
 })
 //to animate use 16.66666667 ms setInterval, ok?
+setInterval(animLoop,16.66666667)
 io.on("connection", (socket) => {
     if (players[socket.id]) delete players[socket.id]
     players[socket.id] = new Player({
@@ -159,31 +177,35 @@ io.on("connection", (socket) => {
             x: 0,
             y: 0,
             z: 0,
+        },
+        geometry: {
+            x: 1,
+            y: 2,
+            z: 1,
         }
     })
     socket.on("keydown",(key) => {
-        const player = players[socket.id].transform
         switch(key) {
             case "S": {
-                players[socket.id].transform.position.z += 1 
+                players[socket.id].velocity.z = .5 
                 players[socket.id].transform.dir = "backward"
                 players[socket.id].transform.dir = "backward"
                 break;
             }
             case "W": {
-                players[socket.id].transform.position.z -= 1
+                players[socket.id].velocity.z = -.5
                 players[socket.id].transform.dir = "forward"
                 players[socket.id].transform.dir = "forward"
                 break;
             }
             case "A": {
-                players[socket.id].transform.position.x -= 1
+                players[socket.id].velocity.x = -.5
                 players[socket.id].transform.dir = "left"
                 players[socket.id].transform.dir = "left"
                 break;
             }
             case "D": {
-                players[socket.id].transform.position.x += 1
+                players[socket.id].velocity.x = .5
                 players[socket.id].transform.dir = "right"
                 players[socket.id].transform.dir = "right"
                 break;
@@ -193,8 +215,19 @@ io.on("connection", (socket) => {
                 break;
             }
         }
-        if (players[socket.id] != player)  {
-            io.emit("playerUpdate",players)
+    })
+    socket.on("keyup", (key) => {
+        const player = players[socket.id]
+        switch(key) {
+            case "W":
+            case "S":
+                player.velocity.z = 0
+                break;
+            case "A":
+            case "D":
+                player.velocity.x = 0
+                break; 
+                
         }
     })
     socket.on("equipItem", (itemName) => {
@@ -210,10 +243,8 @@ io.on("connection", (socket) => {
             return
         }
         players[socket.id].equip(item)
-        io.emit("playerUpdate",players)
         socket.emit("updateInv")
     })
-    io.emit("playerUpdate",players)
     socket.on("disconnect", () => {
         console.log("player leave :'(")
         io.emit("playerDisconnect",(socket.id))
