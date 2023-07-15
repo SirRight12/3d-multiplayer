@@ -58,34 +58,96 @@ function init() {
   renderer = new THREE.WebGLRenderer({ alpha: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
+  function makeAnything(src,onload) {
+    return new Promise((resolve, reject) => {
+        loader.load("static/threejs/media/Assets/" + src, (gltf) => {
+          const thing = gltf.scene;
+          if (onload) {
+              onload(thing)
+          }
+          resolve(thing);
+        }, undefined, (error) => {
+          reject(error);
+        });
+      });
+  }
+  socket.on("playersInit", (backendPlayers) => {
+        for (let x in backendPlayers) {
+            const playerName = x + "_player"
+            if (objs[playerName]) {
+                removePlayer(playerName)
+                removePlayer(x + "_sword")
+            }
+            const player = backendPlayers[x]
+            const geometry = new THREE.BoxGeometry( player.transform.geometry.x, player.transform.geometry.y, player.transform.geometry.z );
+            const material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } ); 
+            const cube = new THREE.Mesh( geometry, material );
+            cube.position.x = player.transform.position.x
+            cube.position.y = player.transform.position.y
+            cube.position.z = player.transform.position.z
+            objs[x] = cube
+            const plrPos = backendPlayers[x].transform.position     
+            makeAnything("Other_Yoinks/fox.glb").then((player) => {
+                console.log("player")
+                player.position.x = plrPos.x
+                player.position.y = plrPos.y
+                player.position.z = plrPos.z
+                let foxDir = setFoxDir(backendPlayers[x].transform.dir)
+                console.log(foxDir)
+                player.rotation.y = foxDir
+                scene.add(player)
+                objs[playerName] = player
+            }).catch((error) => {
+                console.error(error)
+            })
+            makeSword().then((sword) => {
+                scene.add(sword)
+                objs[x + "_sword"] = sword
+                setPosTo3(sword,cube,determineSwordOffset(player.transform.dir))
+                changeSwordDir(sword,player.transform.dir)
+            }).catch((error) => {
+                console.error(error);
+            });
+        }
+        console.log("init player")
+  })
+  function setFoxDir(dir) {
+    let toReturn;
+    switch (dir) {
+        case "forward": 
+            toReturn = 3
+            break;
+        case "backward": 
+            toReturn = 0
+            break;
+        case "right": 
+            toReturn = 1.5
+            break;
+        case "left": 
+            toReturn = 4.5
+            break; 
+    }
+    return toReturn
+  }
   function makePlayer(player,Name) {
     if (players[Name]) {
         if (player.transform.position.x == players[Name].transform.position.x && player.transform.position.y == players[Name].transform.position.y && player.transform.position.z == players[Name].transform.position.z) {
             return;
         }
     }
-    removePlayer(Name)
-    const geometry = new THREE.BoxGeometry( player.transform.geometry.x, player.transform.geometry.y, player.transform.geometry.z );
-    const material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } ); 
-    const cube = new THREE.Mesh( geometry, material );
-    cube.position.x = player.transform.position.x
-    cube.position.y = player.transform.position.y
-    cube.position.z = player.transform.position.z
-    objs[Name] = cube
-        if (!objs[Name + "_sword"]) {
-            makeSword().then((sword) => {
-                scene.add(sword)
-                objs[Name + "_sword"] = sword
-                setPosTo3(sword,cube,determineSwordOffset(player.transform.dir))
-                changeSwordDir(sword,player.transform.dir)
-            }).catch((error) => {
-                console.error(error);
-            });
-        } else {
+        const cube = objs[Name]
+        const fox = objs[Name + "_player"]
+        if (cube) {
+            setPosTo(cube,player)
+        }
+        if (fox) {
+            setPosTo(fox,player) 
+            fox.rotation.y = setFoxDir(players[Name].transform.dir)
+        }
+        if (objs[Name + "_sword"]) {  
             setPosTo3(objs[Name + "_sword"],cube,determineSwordOffset(player.transform.dir))
             changeSwordDir(objs[Name + "_sword"],player.transform.dir)
-        }
-        scene.add( cube );
+        } 
   }
   function determineSwordOffset(dir) {
     let offset;
@@ -172,6 +234,7 @@ function init() {
   socket.on("playerDisconnect", (plrName) => {
     removePlayer(plrName)
     removePlayer(plrName + "_sword")
+    removePlayer(plrName + "_player")
     delete players[plrName]
   })
   function removePlayer(name) {
@@ -225,6 +288,10 @@ function replaceAll(thing) {
     returnval = returnval.replace("father", " Father")
     return returnval
 }
+socket.on("closeInv", () => {
+    inv.remove()
+    inv = ""
+})
 function openInventory() {
     if (inv) inv.remove() 
     const player = players[socket.id]
@@ -232,7 +299,7 @@ function openInventory() {
     inv.id = "inv"
     inv.style.width = "70%"
     inv.style.height =  "85%"
-    inv.innerHTML = "<strong> Inventory: </strong> <br>"
+    inv.innerHTML = "<strong> Inventory: </strong> <br> <br>"
     let i = 0
     let list = {}
     document.body.appendChild(inv)
@@ -266,7 +333,7 @@ for (let x in list) {
 }
 list = {}
 i = 0
-inv.innerHTML += "<br> <strong> Equipped: </strong> <br>"
+inv.innerHTML += "<br> <strong> Equipped: </strong> <br> <br>"
 let itemsadded = 0
     for (let item in player.inventory.equipped) {
         let itemthing = player.inventory.equipped[item]

@@ -5,7 +5,7 @@ const http = require("http")
 const server = http.createServer(app)
 const { Server } = require("socket.io")
 const io = new Server(server, {pingInterval: 2000,pingTimeout: 1000})
-
+const floorHeight = 0
 app.use(express.static('public'))
 class Weapon {
     constructor(damage=1,atkSpeed,name="None",tooltip="Added by mistake",slot="weapon") {
@@ -41,12 +41,14 @@ const armors = {
     copperlegs: new Armor(1,"copperlegs","A pair of boots forged of copper, not the strongest, but also not the weakest.","armor-legs"),
 }
 class Player {
-    constructor ({position={x:0,y:0,z:0},geometry={x:1,y:1,z:1}}) {
+    constructor ({position={x:0,y:0,z:0},geometry={x:1,y:1,z:1},movementSpeed=.3}) {
         this.transform = {
             position: position,
             dir: "forward",
             geometry: geometry,
         }
+        this.invOpen = false
+        this.movementSpeed = movementSpeed
         this.hasSword = false
         this.inventory = {
             equipped: {
@@ -157,6 +159,12 @@ function animLoop() {
     io.emit("playerUpdate",players)
 }
 function move(player) {
+    if (player.transform.position.y > floorHeight) {
+        player.velocity.y -= .3
+    } else if (player.velocity.y < 0) {
+        player.transform.position.y = floorHeight
+        player.velocity.y = 0
+    }
     if (!player.velocity.x && !player.velocity.z && !player.velocity.y) return
         player.transform.position.x += player.velocity.x
         player.transform.position.y += player.velocity.y
@@ -184,36 +192,46 @@ io.on("connection", (socket) => {
             z: 1,
         }
     })
+    io.emit("playersInit",(players))
     socket.on("keydown",(key) => {
+        if (players[socket.id].invOpen && key != "I") {
+            return
+        }
         switch(key) {
-            case "S": {
-                players[socket.id].velocity.z = .5 
+            case "S":
+                players[socket.id].velocity.z = players[socket.id].movementSpeed
                 players[socket.id].transform.dir = "backward"
                 players[socket.id].transform.dir = "backward"
                 break;
-            }
-            case "W": {
-                players[socket.id].velocity.z = -.5
+            case "W":
+                players[socket.id].velocity.z = -players[socket.id].movementSpeed
                 players[socket.id].transform.dir = "forward"
                 players[socket.id].transform.dir = "forward"
                 break;
-            }
-            case "A": {
-                players[socket.id].velocity.x = -.5
+            case "A": 
+                players[socket.id].velocity.x = -players[socket.id].movementSpeed
                 players[socket.id].transform.dir = "left"
                 players[socket.id].transform.dir = "left"
                 break;
-            }
-            case "D": {
-                players[socket.id].velocity.x = .5
+            case "D":
+                players[socket.id].velocity.x = players[socket.id].movementSpeed
                 players[socket.id].transform.dir = "right"
                 players[socket.id].transform.dir = "right"
                 break;
-            }
-            case "I": {
-                socket.emit("updateInv")
+            case " ": 
+                players[socket.id].velocity.y += 1.5
                 break;
-            }
+            case "I": 
+                if (!players[socket.id].invOpen) {
+                    socket.emit("updateInv")
+                    players[socket.id].invOpen = true
+                } else {
+                    players[socket.id].invOpen = false
+                    socket.emit("closeInv")
+                }
+                players[socket.id].velocity.x = 0
+                players[socket.id].velocity.z = 0
+                break;
         }
     })
     socket.on("keyup", (key) => {
@@ -230,19 +248,19 @@ io.on("connection", (socket) => {
                 
         }
     })
+    function determineItem(iswep,itemName) {
+        if (iswep) return weapons[itemName]
+        return armors[itemName]
+    }
     socket.on("equipItem", (itemName) => {
-        let item;
         let iswep = isWeapon(weapons[itemName])
-        if (iswep){
-            item = weapons[itemName]
-        } else if (iswep == false) {
-            item = armors[itemName]
-        }
+        let item = determineItem(iswep,itemName)
         if (!item) {
             console.log("item does not exist?")
             return
         }
         players[socket.id].equip(item)
+        io.emit("playerUpdate",players)
         socket.emit("updateInv")
     })
     socket.on("disconnect", () => {
@@ -259,7 +277,7 @@ io.on("connection", (socket) => {
             item = armors[itemName]
         }
         if (!item) {
-            console.log("item does not exist?")
+            console.log("Item does not exist?")
             return
         }
         players[socket.id].unequip(item)
