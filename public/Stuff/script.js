@@ -109,11 +109,10 @@ function init() {
             })
         }
     })
-    function playAnim(name, anims, mix,plrName) {
+    function playAnim(name, anims, mix,plrName,type,callBack) {
         const mixer = mixers[plrName]
         const clip = THREE.AnimationClip.findByName(anims, name);
             if (mix.nameOfAnim == name) {
-                console.log("already the same anim")
                 return
             } else {
                 delete mixers[plrName].mix
@@ -122,7 +121,18 @@ function init() {
             mix.nameOfAnim = name 
         if (clip) {
           const action = mixer.mix.clipAction(name);
+          console.log(name + " " + clip.duration)
           action.play();
+          if (type == "once") {
+            const time = clip.duration * 1000
+            if (callBack) { 
+                setTimeout( () => {
+                    callBack(plrName)
+                    delete mixers[plrName].mix
+                    mixers[plrName].mix = new THREE.AnimationMixer(objs[plrName + "_player"])
+                },time)
+            }
+          }
         } else {
           console.error(`Animation clip "${name}" not found.`);
         }
@@ -219,7 +229,10 @@ function init() {
     playAnim("Fall",objs[x + "_player"].animations,mixers[x],x)
   }
   function jump(x) {
-    playAnim("Jump",objs[x + "_player"].animations,mixers[x],x)
+    playAnim("Jump",objs[x + "_player"].animations,mixers[x],x,"once",jumpLoop)
+  }
+  function jumpLoop(x) {
+    fall(x)
   }
   const floorGeometry = new THREE.BoxGeometry(10,1,10)
   const floorMaterial = new THREE.MeshBasicMaterial( { color: 0xffffff} )

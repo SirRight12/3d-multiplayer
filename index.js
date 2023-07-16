@@ -190,7 +190,8 @@ io.on("connection", (socket) => {
             x: 1,
             y: 2,
             z: 1,
-        }
+        },
+        movementSpeed: .1,
     })
     io.emit("playersInit",(players))
     socket.on("keydown",(key) => {
@@ -219,7 +220,7 @@ io.on("connection", (socket) => {
                 players[socket.id].transform.dir = "right"
                 break;
             case " ": 
-                players[socket.id].velocity.y += 1.5
+                players[socket.id].velocity.y += 0.9
                 break;
             case "I": 
                 if (!players[socket.id].invOpen) {
