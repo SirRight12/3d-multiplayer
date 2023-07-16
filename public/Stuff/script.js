@@ -3,8 +3,9 @@ let scene, camera, renderer;
 const loader = new THREE.GLTFLoader()
 const bodyDepth = 100;
 const depthMargin = 10;
+const mixers = {
 
-
+}
 const players = {
 
 }
@@ -24,11 +25,9 @@ function init() {
     let loaded = false
       sword = await loader.load("static/threejs/media/Assets/Other_Yoinks/sword_teamRed.glb", (gltf) => {
             loaded = true
-            console.log("done")
             sword = gltf.scene
             return gltf.scene
         })
-        console.log(await sword)
         return await sword
     } */
     async function makeSword() {
@@ -62,6 +61,7 @@ function init() {
     return new Promise((resolve, reject) => {
         loader.load("static/threejs/media/Assets/" + src, (gltf) => {
           const thing = gltf.scene;
+          thing.animations = gltf.animations
           if (onload) {
               onload(thing)
           }
@@ -88,32 +88,49 @@ function init() {
             objs[x] = cube
             const plrPos = backendPlayers[x].transform.position     
             makeAnything("Other_Yoinks/fox.glb").then((player) => {
-                console.log("player")
                 player.position.x = plrPos.x
                 player.position.y = plrPos.y
                 player.position.z = plrPos.z
                 let foxDir = setFoxDir(backendPlayers[x].transform.dir)
-                console.log(foxDir)
                 player.rotation.y = foxDir
                 scene.add(player)
                 objs[playerName] = player
+                if (mixers[x]) delete mixers[x]
+                mixers[x] = {
+                    mix: new THREE.AnimationMixer(objs[x + "_player"]),
+                    clock: new THREE.Clock(),
+                    isInAnim: false,
+                    nameOfAnim: "Idle"
+                }
+                playAnim("Idle",objs[x + "_player"].animations,mixers[x],x)
+                run(x)
             }).catch((error) => {
                 console.error(error)
             })
-            makeSword().then((sword) => {
-                scene.add(sword)
-                objs[x + "_sword"] = sword
-                setPosTo3(sword,cube,determineSwordOffset(player.transform.dir))
-                changeSwordDir(sword,player.transform.dir)
-            }).catch((error) => {
-                console.error(error);
-            });
         }
-        console.log("init player")
-  })
-  function setFoxDir(dir) {
-    let toReturn;
-    switch (dir) {
+    })
+    function playAnim(name, anims, mix,plrName) {
+        const mixer = mixers[plrName]
+        const clip = THREE.AnimationClip.findByName(anims, name);
+            if (mix.nameOfAnim == name) {
+                console.log("already the same anim")
+                return
+            } else {
+                delete mixers[plrName].mix
+                mixers[plrName].mix = new THREE.AnimationMixer(objs[plrName + "_player"])
+            }
+            mix.nameOfAnim = name 
+        if (clip) {
+          const action = mixer.mix.clipAction(name);
+          action.play();
+        } else {
+          console.error(`Animation clip "${name}" not found.`);
+        }
+      }
+      
+    function setFoxDir(dir) {
+        let toReturn;
+        switch (dir) {
         case "forward": 
             toReturn = 3
             break;
@@ -192,6 +209,18 @@ function init() {
     }
     sword.rotation.y = 1.5
   }
+  function run(x) {
+    playAnim("Run",objs[x + "_player"].animations,mixers[x],x)
+  }
+  function idle(x) {
+    playAnim("Idle",objs[x + "_player"].animations,mixers[x],x)
+  }
+  function fall(x) {
+    playAnim("Fall",objs[x + "_player"].animations,mixers[x],x)
+  }
+  function jump(x) {
+    playAnim("Jump",objs[x + "_player"].animations,mixers[x],x)
+  }
   const floorGeometry = new THREE.BoxGeometry(10,1,10)
   const floorMaterial = new THREE.MeshBasicMaterial( { color: 0xffffff} )
   const floor = new THREE.Mesh(floorGeometry,floorMaterial)
@@ -205,6 +234,9 @@ function init() {
         makePlayer(player,i)
         player.openInventory = openInventory
         players[i] = player
+        if (objs[i + "_player"]) {
+            animation(i,backendPlayers)
+        }
     } 
     const camOffset = {
         x: 0,
@@ -213,6 +245,20 @@ function init() {
     }
     setPosTo(camera,players[socket.id],camOffset)
   })
+  function animation(thing,backend) {
+    const name = thing + "_player"
+    const player = backend[thing]
+    const fox = objs[name]
+    if (player.velocity.y > 0) {
+        jump(thing)
+    } else if (player.velocity.y < 0) {
+        fall(thing)
+    } else if (player.velocity.x != 0 || player.velocity.z != 0) {
+        run(thing)
+    } else {
+        idle(thing)
+    }
+  }
   function setPosTo(thing,backendPlayer, offset={x:0,y:0,z:0,}) {
     thing.position.x = backendPlayer.transform.position.x + offset.x
     thing.position.z = backendPlayer.transform.position.z + offset.z
@@ -250,12 +296,15 @@ function onWindowResize() {
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
 function animate() {
+  for (let x in mixers) {
+    mixers[x].mix.update(mixers[x].clock.getDelta())
+  }
   //this is where animations happen
-  checkIfLoad()
+  checkIfDuckLoad()
   renderer.render(scene, camera);
   requestAnimationFrame(animate);
 }
-function checkIfLoad() {
+function checkIfDuckLoad() {
     if (!duckLight || !duckObj) return
         const lightOffset = {
             x: 0,

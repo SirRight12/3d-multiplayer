@@ -160,7 +160,7 @@ function animLoop() {
 }
 function move(player) {
     if (player.transform.position.y > floorHeight) {
-        player.velocity.y -= .3
+        player.velocity.y -= .05
     } else if (player.velocity.y < 0) {
         player.transform.position.y = floorHeight
         player.velocity.y = 0
