@@ -47,6 +47,7 @@ class Player {
             dir: "forward",
             geometry: geometry,
         }
+        this.originSpeed = movementSpeed
         this.invOpen = false
         this.movementSpeed = movementSpeed
         this.hasSword = false
@@ -61,6 +62,21 @@ class Player {
                 "woodhelmet": armors.woodhelmet,
             },
         },
+        this.keys = {
+            w: {
+                pressed: false,
+            },
+            a: {
+                pressed: false,
+            },
+            s: {
+                pressed: false,
+            },
+            d: {
+                pressed: false,
+            },
+        }
+        this.strafing = false
         this.velocity = {
             x: 0,
             y: 0,
@@ -165,6 +181,26 @@ function move(player) {
         player.transform.position.y = floorHeight
         player.velocity.y = 0
     }
+    if (player.strafing) {
+        player.movementSpeed = player.originSpeed * .75
+    } else if (player.movementSpeed != player.originSpeed) {
+        player.movementSpeed = player.originSpeed
+    }
+    player.velocity.z = 0
+    player.velocity.x = 0
+    if (player.keys.w.pressed) {
+        player.velocity.z = -player.movementSpeed
+    }
+    if (player.keys.s.pressed) {
+        player.velocity.z = player.movementSpeed
+    }
+    if (player.keys.a.pressed) {
+        player.velocity.x = -player.movementSpeed
+    }
+    if (player.keys.d.pressed) {
+        player.velocity.x = player.movementSpeed
+    }
+
     if (!player.velocity.x && !player.velocity.z && !player.velocity.y) return
         player.transform.position.x += player.velocity.x
         player.transform.position.y += player.velocity.y
@@ -195,27 +231,29 @@ io.on("connection", (socket) => {
     })
     io.emit("playersInit",(players))
     socket.on("keydown",(key) => {
+        const player = players[socket.id]
         if (players[socket.id].invOpen && key != "I") {
             return
         }
+        console.log(player.movementSpeed)
         switch(key) {
             case "S":
-                players[socket.id].velocity.z = players[socket.id].movementSpeed
+                player.keys.s.pressed = true
                 players[socket.id].transform.dir = "backward"
                 players[socket.id].transform.dir = "backward"
                 break;
             case "W":
-                players[socket.id].velocity.z = -players[socket.id].movementSpeed
+                player.keys.w.pressed = true
                 players[socket.id].transform.dir = "forward"
                 players[socket.id].transform.dir = "forward"
                 break;
             case "A": 
-                players[socket.id].velocity.x = -players[socket.id].movementSpeed
+                player.keys.a.pressed = true
                 players[socket.id].transform.dir = "left"
                 players[socket.id].transform.dir = "left"
                 break;
             case "D":
-                players[socket.id].velocity.x = players[socket.id].movementSpeed
+                player.keys.d.pressed = true
                 players[socket.id].transform.dir = "right"
                 players[socket.id].transform.dir = "right"
                 break;
@@ -226,6 +264,9 @@ io.on("connection", (socket) => {
                 if (!players[socket.id].invOpen) {
                     socket.emit("updateInv")
                     players[socket.id].invOpen = true
+                    for (let keything in player.keys) {
+                        player.keys[keything].pressed = false
+                    }
                 } else {
                     players[socket.id].invOpen = false
                     socket.emit("closeInv")
@@ -233,6 +274,14 @@ io.on("connection", (socket) => {
                 players[socket.id].velocity.x = 0
                 players[socket.id].velocity.z = 0
                 break;
+        }
+        let forward = player.keys.w.pressed || player.keys.s.pressed;
+        let side = player.keys.a.pressed || player.keys.d.pressed;
+        if (forward && side) {
+            if (!player.strafing) player.strafing = true
+            
+        } else if (player.strafing) {
+            player.strafing = false
         }
     })
     socket.on("keyup", (key) => {
@@ -245,8 +294,28 @@ io.on("connection", (socket) => {
             case "A":
             case "D":
                 player.velocity.x = 0
-                break; 
-                
+                break;
+        }
+        switch (key) {
+            case "W":
+                player.keys.w.pressed = false
+                break;
+            case "A": 
+                player.keys.a.pressed = false
+                break;
+            case "S": 
+                player.keys.s.pressed = false
+                break;
+            case "D": 
+                player.keys.d.pressed = false
+        }
+        let forward = player.keys.w.pressed || player.keys.s.pressed;
+        let side = player.keys.a.pressed || player.keys.d.pressed;
+        if (forward && side) {
+            if (!player.strafing) player.strafing = true
+            
+        } else if (player.strafing) {
+            player.strafing = false
         }
     })
     function determineItem(iswep,itemName) {
