@@ -115,7 +115,6 @@ class Player {
             if (!foundmatch) {
                 return
             } 
-            //if (!this.inventory.holding.hasOwnProperty(item.name)) return
             console.log("item found!")
             let equip = item.name
             switch(item.slot) {
@@ -235,7 +234,6 @@ io.on("connection", (socket) => {
         if (players[socket.id].invOpen && key != "I") {
             return
         }
-        console.log(player.movementSpeed)
         switch(key) {
             case "S":
                 player.keys.s.pressed = true
