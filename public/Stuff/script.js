@@ -14,7 +14,7 @@ const objs = {
 }
 function init() {
     scene = new THREE.Scene();
-  let duckObj = loader.load("static/threejs/media/duck.glb", (gltf) => {
+    let duckObj = loader.load("static/threejs/media/duck.glb", (gltf) => {
     duckObj = gltf.scene
     scene.add(duckObj)
     duckObj.position.y = 1
